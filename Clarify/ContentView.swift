@@ -6,77 +6,44 @@
 //
 
 import SwiftUI
-import SwiftData
 
-struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
-    var body: some View {
-        NavigationViewWrapper {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
-    }
+enum AppTab: Hashable {
+    case lookUp, library, quiz
 }
 
-fileprivate struct NavigationViewWrapper<Content: View>: View {
-    let content: () -> Content
+struct ContentView: View {
+    @State private var selectedTab: AppTab = .lookUp
+    @State private var lookUpFocusRequest = 0
+
+    // Watches every tab tap; tapping Look Up while already on it requests focus.
+    private var tabSelection: Binding<AppTab> {
+        Binding(
+            get: { selectedTab },
+            set: { newTab in
+                if newTab == selectedTab && newTab == .lookUp {
+                    lookUpFocusRequest += 1
+                }
+                selectedTab = newTab
+            }
+        )
+    }
 
     var body: some View {
-#if os(macOS)
-        NavigationSplitView {
-            content()
-        } detail: {
-            Text("Select an item")
+        TabView(selection: tabSelection) {
+            Tab("Look Up", systemImage: "text.magnifyingglass", value: .lookUp) {
+                LookUpView(focusRequest: lookUpFocusRequest)
+            }
+            Tab("Library", systemImage: "books.vertical", value: .library) {
+                LibraryView()
+            }
+            Tab("Quiz", systemImage: "questionmark.circle", value: .quiz) {
+                QuizView()
+            }
         }
-#else
-        NavigationStack {
-            content()
-        }
-#endif
+        .tabViewStyle(.sidebarAdaptable)
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }

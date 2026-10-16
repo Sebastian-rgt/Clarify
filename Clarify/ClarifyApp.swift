@@ -10,6 +10,20 @@ import SwiftData
 
 @main
 struct ClarifyApp: App {
+    init() {
+        UISegmentedControl.appearance().backgroundColor = .clear
+        
+        #if os(iOS)
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor { traits in
+            if traits.userInterfaceStyle == .dark {
+                return UIColor(white: 0.0375, alpha: 1.0)
+            } else {
+                return .white
+            }
+        }
+        #endif
+    }
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
